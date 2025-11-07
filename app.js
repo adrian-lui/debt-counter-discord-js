@@ -8,15 +8,12 @@ import {
   MessageComponentTypes,
   verifyKeyMiddleware,
 } from "discord-interactions";
-import { getRandomEmoji, DiscordRequest, getChannelMessages } from "./utils.js";
-import { getShuffledOptions, getResult } from "./game.js";
+import { getRandomEmoji, DiscordRequest, getLastDebts } from "./utils.js";
 
 // Create an express app
 const app = express();
 // Get port, or default to 3000
 const PORT = process.env.PORT || 3000;
-// To keep track of our active games
-const activeGames = {};
 
 /**
  * Interactions endpoint URL where Discord will send HTTP requests
