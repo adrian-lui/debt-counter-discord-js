@@ -134,8 +134,11 @@ app.post(
 function getDebtsFormatted() {
   let textDisplay = "";
   const debts: Record<string, SQLOutputValue>[] = getDebts.all();
+  const mostDebt = Math.max(...debts.map((debt) => <number>debt["debt"]));
   for (const debt of debts) {
-    textDisplay += `<@${debt["userId"]}>: ${debt["debt"]}\n`;
+    textDisplay += `<@${debt["userId"]}>: ${debt["debt"]}${
+      mostDebt === debt["debt"] ? " <:debtcollector:1436768848715059382>" : ""
+    }\n`;
   }
   return textDisplay;
 }
