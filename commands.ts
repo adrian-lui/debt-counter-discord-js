@@ -10,6 +10,14 @@ const TEST_COMMAND = {
   contexts: [0, 1, 2],
 };
 
+const ALL_DEBTS_COMMAND = {
+  name: "all_debts",
+  description: "Show all debts",
+  type: 1,
+  integration_types: [0, 1],
+  contexts: [0, 1, 2],
+};
+
 const DEBT_COMMAND = {
   name: "debt",
   description: "Update users debt",
@@ -55,6 +63,6 @@ const DEBT_COMMAND = {
   contexts: [0, 1, 2],
 };
 
-const ALL_COMMANDS = [TEST_COMMAND, DEBT_COMMAND];
+const ALL_COMMANDS = [TEST_COMMAND, ALL_DEBTS_COMMAND, DEBT_COMMAND];
 
-InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS);
+InstallGlobalCommands(process.env.APP_ID!, ALL_COMMANDS);

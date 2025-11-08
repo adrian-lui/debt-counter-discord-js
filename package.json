@@ -9,8 +9,8 @@
     "node": ">=18.x"
   },
   "scripts": {
-    "start": "node app.js",
-    "register": "node commands.js",
+    "start": "node --experimental-sqlite dist/app.js",
+    "register": "node dist/commands.js",
     "dev": "nodemon app.js"
   },
   "author": "Adrian Lui",
@@ -21,6 +21,8 @@
     "express": "^4.18.2"
   },
   "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.0",
     "nodemon": "^3.0.0"
   }
 }

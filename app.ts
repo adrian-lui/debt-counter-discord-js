@@ -8,7 +8,16 @@ import {
   MessageComponentTypes,
   verifyKeyMiddleware,
 } from "discord-interactions";
-import { getRandomEmoji, DiscordRequest, getLastDebts } from "./utils.js";
+import { calculate, DiscordRequest } from "./utils.js";
+import {
+  createDb,
+  getDebtByUserId,
+  getDebts,
+  initDb,
+  insert,
+  update,
+} from "./db/db.js";
+import { SQLOutputValue } from "node:sqlite";
 
 // Create an express app
 const app = express();
@@ -21,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  */
 app.post(
   "/interactions",
-  verifyKeyMiddleware(process.env.PUBLIC_KEY),
+  verifyKeyMiddleware(process.env.PUBLIC_KEY!),
   async function (req, res) {
     // Interaction id, type and data
     const { id, type, data } = req.body;
@@ -51,37 +60,14 @@ app.post(
               {
                 type: MessageComponentTypes.TEXT_DISPLAY,
                 // Fetches a random emoji to send from a helper function
-                content: `hello world ${getRandomEmoji()}`,
+                content: `hello world`,
               },
             ],
           },
         });
       }
 
-      if (name === "debt") {
-        const debts = {};
-        const lastDebts = await getLastDebts(process.env.CHANNEL_ID);
-        if (lastDebts) {
-          lastDebts.forEach((lastDebt) => {
-            const [id, debt] = lastDebt.split(":");
-            debts[id.slice(2, -1)] = debt.trim();
-          });
-        }
-
-        const user = data.options.find(
-          (option) => option.name === "user"
-        ).value;
-        const math_operator = data.options.find(
-          (option) => option.name === "math_operator"
-        ).value;
-        const amount = data.options.find(
-          (option) => option.name === "amount"
-        ).value;
-        if (!debts[user]) {
-          debts[user] = calculate(0, math_operator, amount);
-        } else {
-          debts[user] = calculate(debts[user], math_operator, amount);
-        }
+      if (name === "all_debts") {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
@@ -89,7 +75,48 @@ app.post(
             components: [
               {
                 type: MessageComponentTypes.TEXT_DISPLAY,
-                content: `Debts:\n${showDebts(debts)}`,
+                content: `All debts:\n${getDebtsFormatted()}`,
+              },
+            ],
+          },
+        });
+      }
+
+      if (name === "debt") {
+        const userId: string = data.options.find(
+          (option: { name: string; value: string }) => option.name === "user"
+        ).value;
+        const math_operator: string = data.options.find(
+          (option: { name: string; value: string }) =>
+            option.name === "math_operator"
+        ).value;
+        const amount: number = data.options.find(
+          (option: { name: string; value: string }) => option.name === "amount"
+        ).value;
+
+        const userDebt = getDebtByUserId.get(userId);
+        if (!userDebt) {
+          insert.run(calculate(0, math_operator, amount), userId);
+        } else {
+          update.run(
+            calculate(<number>userDebt.debt, math_operator, amount),
+            userId
+          );
+        }
+        // const debts = await getLastDebts(process.env.CHANNEL_ID!, data);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: InteractionResponseFlags.IS_COMPONENTS_V2,
+            components: [
+              {
+                type: MessageComponentTypes.TEXT_DISPLAY,
+                content: `${math_operator} ${amount} to <@${userId}>s debt`,
+              },
+              {
+                type: MessageComponentTypes.TEXT_DISPLAY,
+                content: `Debts:\n${getDebtsFormatted()}`,
               },
             ],
           },
@@ -104,29 +131,23 @@ app.post(
   }
 );
 
-function showDebts(debts) {
+function getDebtsFormatted() {
   let textDisplay = "";
-  for (const debt of Object.entries(debts)) {
-    textDisplay += `<@${debt[0]}>: ${debt[1]}\n`;
+  const debts: Record<string, SQLOutputValue>[] = getDebts.all();
+  for (const debt of debts) {
+    textDisplay += `<@${debt["userId"]}>: ${debt["debt"]}\n`;
   }
   return textDisplay;
 }
 
-function calculate(num1, operator, num2) {
-  switch (operator) {
-    case "add":
-      return parseInt(num1) + parseInt(num2);
-    case "minus":
-      return parseInt(num1) - parseInt(num2);
-    case "times":
-      return parseInt(num1) * parseInt(num2);
-    case "divide":
-      return parseInt(num1) / parseInt(num2);
-    case "power":
-      return parseInt(num1) ** parseInt(num2);
-  }
-}
-
 app.listen(PORT, () => {
+  try {
+    console.log("create db...");
+    createDb();
+  } catch (e) {
+    console.log("db exists already.");
+  }
+  console.log("init db...");
+  initDb();
   console.log("Listening on port", PORT);
 });
